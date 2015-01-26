@@ -12,7 +12,7 @@ Setup
 
 *Payload URL:*
 Use the deployed URL such as:
-http://github-automator.herokuapp.com/version-check
+http://AUTOMATOR-LOCATION-ON-HEROKU.herokuapp.com/version-check
 
 *Content type:*
 application/x-www-form-urlencoded
