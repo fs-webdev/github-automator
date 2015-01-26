@@ -12,6 +12,7 @@ Setup
 
 *Payload URL:*
 Use the deployed URL such as:
+
 http://AUTOMATOR-LOCATION-ON-HEROKU.herokuapp.com/version-check
 
 *Content type:*
@@ -27,5 +28,7 @@ Set these settings, add the webhook, and you should be good to go.
 **Configure the .env variables**
 
 GITHUB_URL=https://api.github.com
+
 GITHUB_LOGIN=
+
 GITHUB_PASSWORD=
