@@ -69,11 +69,18 @@ module.exports = function(app) {
 
           return console.log({"old_version": old_version, "new_version": new_version});
         },
-        function failure(error) { return console.log(error); }
+        function failure(error) { return console.error('error:', error); }
       );
 
 
       function create_release() {
+        console.log('creating release to ' + owner + '/' + repo + ' with payload: {');
+        console.log('  tag_name:', new_version + ',');
+        console.log('  target_commitish:', payload.after+ ',');
+        console.log('  name:', new_version + ',');
+        console.log('  body:', payload.head_commit.message);
+        console.log('}');
+
         superagent
           .post(api + "/repos/" + owner + "/" + repo + "/releases")
           .send({
@@ -83,8 +90,10 @@ module.exports = function(app) {
             "body": payload.head_commit.message
           })
           .end(function(error, response) {
-            if (error) { console.log(error); }
-            if (!response.ok) { console.log(response.status); }
+            if (error) { return console.error('error:', error); }
+            if (!response.ok) { return console.log(response.status); }
+
+            console.log('release successful');
             console.log({"old_version": old_version, "new_version": new_version});
           });
       }
