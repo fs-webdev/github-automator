@@ -8,7 +8,7 @@ app.use(express.logger('dev'));
 app.use(express.cookieParser());
 app.use(express.bodyParser());
 app.use(express.methodOverride());
-app.use(express.session({secret: "12kl5jv953BGADG32fSD21ed1fG5vjfdjsajfj32j5t"}));
+app.use(express.session({secret: process.env.SESSION_SECRET}));
 app.use(app.router);
 
 // development only
