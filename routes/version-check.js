@@ -74,7 +74,7 @@ module.exports = function(app) {
 
 
       function create_release() {
-        console.log('creating release to ' + owner + '/' + repo + ' with payload: {');
+        console.log('creating release to ' + api + '/repos/' + owner + '/' + repo + '/releases with payload: {');
         console.log('  tag_name:', new_version + ',');
         console.log('  target_commitish:', payload.after+ ',');
         console.log('  name:', new_version + ',');
@@ -91,7 +91,7 @@ module.exports = function(app) {
           })
           .end(function(error, response) {
             if (error) { return console.error('error:', error); }
-            if (!response.ok) { return console.log(response.status); }
+            if (!response.ok) { return console.warn('response:', response); }
 
             console.log('release successful');
             console.log({"old_version": old_version, "new_version": new_version});
