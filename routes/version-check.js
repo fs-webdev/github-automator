@@ -91,7 +91,7 @@ module.exports = function(app) {
           })
           .end(function(error, response) {
             if (error) { return console.error('error:', error); }
-            if (!response.ok) { return console.warn('response:', response); }
+            if (!response.ok) { return console.warn('response:', response.status, response.text); }
 
             console.log('release successful');
             console.log({"old_version": old_version, "new_version": new_version});
