@@ -1,7 +1,7 @@
 GitHub Automator
 ================
 
-Simple script to automatically create new releases when the `pacakge.json` file version changes. The release title will be the version number and the release body will be the commit message.
+Simple script to automatically create new releases when the `package.json` file version changes. The release title will be the version number and the release body will be the commit message.
 
 ## Setup
 
