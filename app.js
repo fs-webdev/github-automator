@@ -1,19 +1,16 @@
-var express = require('express');
-
-var app = module.exports = express();
+const express = require('express');
+const app = (module.exports = express());
+const morgan = require('morgan');
+const bodyParser = require('body-parser');
+const errorHandler = require('errorhandler');
 
 // all environments
 app.set('port', process.env.PORT || 3000);
-app.use(express.logger('dev'));
-app.use(express.cookieParser());
-app.use(express.bodyParser());
-app.use(express.methodOverride());
-app.use(express.session({secret: process.env.SESSION_SECRET}));
-app.use(app.router);
+app.use(morgan('dev'));
+app.use(bodyParser.json());
 
-// development only
-if ('development' == app.get('env')) {
-  app.use(express.errorHandler());
+if (app.get('env') === 'development') {
+  app.use(errorHandler());
 }
 
 require('./routes/version-check.js')(app);
