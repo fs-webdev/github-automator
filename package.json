@@ -4,18 +4,31 @@
   "private": true,
   "main": "app.js",
   "scripts": {
-    "start": "node app.js"
+    "start": "node app.js",
+    "lintCheck": "eslint app.js routes/"
+  },
+  "eslintConfig": {
+    "env": {
+      "node": true
+    },
+    "extends": [
+      "frontier"
+    ]
   },
   "dependencies": {
-    "express": "3.2.4",
-    "startup": "*",
-    "q": "~0.9.7",
-    "envs": "~0.1.4",
-    "superagent-defaults": "~0.1.4",
-    "superagent": "~0.15.7"
+    "axios": "^0.17.1",
+    "body-parser": "^1.18.2",
+    "errorhandler": "^1.5.0",
+    "express": "^4.16.2",
+    "lodash": "^4.17.4",
+    "morgan": "^1.9.0",
+    "startup": "1.1.0"
   },
   "engines": {
-    "node": "~0.10.22",
-    "npm": "1.3.x"
+    "node": "8"
+  },
+  "devDependencies": {
+    "eslint": "^4.15.0",
+    "eslint-config-frontier": "github:fs-webdev/eslint-config-frontier"
   }
 }

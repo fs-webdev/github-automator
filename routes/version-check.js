@@ -11,148 +11,99 @@
  *
  */
 
+const _ = require('lodash');
+const axios = require('axios');
+axios.defaults.auth = {username: process.env.GITHUB_LOGIN, password: process.env.GITHUB_PASSWORD};
 
-var Q = require('q')
-  , context = require('superagent-defaults')
-  , envs = require('envs')
-  , api = envs("GITHUB_URL")
-  , GITHUB_LOGIN = envs("GITHUB_LOGIN")
-  , GITHUB_PASSWORD = envs("GITHUB_PASSWORD");
+const GITHUB_BASE_URL = process.env.GITHUB_URL;
 
-var superagent = context()
-    .on('request', function(request){
-      request
-        .set('Accept', 'application/json')
-        .set('User-Agent', 'curl/7.24.0 (x86_64-apple-darwin12.0) libcurl/7.24.0 OpenSSL/0.9.8r zlib/1.2.5')
-        .set('Content-Type', 'application/json')
-        .auth(GITHUB_LOGIN, GITHUB_PASSWORD);
-    });
-
-module.exports = function(app) {
-  app.post("/version-check", function(req, res) {
+module.exports = app => {
+  app.post('/version-check', async function(req, res) {
     res.send(202);
 
-    var payload = JSON.parse(req.body.payload);
+    const payload = _.attempt(JSON.parse, req.body.payload);
+    const owner = _.get(payload, 'repository.owner.name');
+    const repo = _.get(payload, 'repository.name');
 
-    if (typeof payload === 'undefined') { return console.log("Invalid Payload"); }
-    if (payload.ref.toLowerCase() !== "refs/heads/master") { return; }
-    if (payload.head_commit.modified.indexOf("package.json") === -1) { return; }
+    if (isInvalidPayload(payload, owner, repo)) {
+      return;
+    }
+    const commit_url = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/git/commits/`;
+    let oldVersion;
+    let newVersion;
 
-    var owner = payload.repository.owner.name
-      , repo = payload.repository.name
-      , commit_url = api + "/repos/" + owner + "/" + repo + "/git/commits/"
-      , old_version, new_version;
-
-    get_commit(commit_url + payload.before)
-      .then(get_tree)
-      .then(get_package_json_blob)
-      .then(
-        function (result) {
-          old_version = JSON.parse(new Buffer(result.content, "base64")).version;
-          return commit_url + payload.after;
-        }
-      )
-      .then(get_commit)
-      .then(get_tree)
-      .then(get_package_json_blob)
-      .then(
-        function (result) {
-          new_version = JSON.parse(new Buffer(result.content, "base64")).version;
-        }
-      )
-      .then(
-        function success() {
-
-          if (old_version !== new_version) {
-            return create_release();
-          }
-
-          return console.log({"old_version": old_version, "new_version": new_version});
-        },
-        function failure(error) { return console.error('error:', error); }
-      );
-
-
-      function create_release() {
-        console.log('creating release to ' + api + '/repos/' + owner + '/' + repo + '/releases with payload: {');
-        console.log('  tag_name:', new_version + ',');
-        console.log('  target_commitish:', payload.after+ ',');
-        console.log('  name:', new_version + ',');
-        console.log('  body:', payload.head_commit.message);
-        console.log('}');
-
-        superagent
-          .post(api + "/repos/" + owner + "/" + repo + "/releases")
-          .send({
-            "tag_name": new_version,
-            "target_commitish": payload.after,
-            "name": new_version,
-            "body": payload.head_commit.message
-          })
-          .end(function(error, response) {
-            if (error) { return console.error('error:', error); }
-            if (!response.ok) { return console.warn('response:', response.status, response.text); }
-
-            console.log('release successful');
-            console.log({"old_version": old_version, "new_version": new_version});
-          });
+    try {
+      oldVersion = await getVersion(commit_url + payload.before);
+      newVersion = await getVersion(commit_url + payload.after);
+      if (oldVersion !== newVersion) {
+        return createRelease();
       }
+    } catch (err) {
+      console.error('error:', err);
+    }
+
+    function createRelease() {
+      const releaseUrl = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/releases`;
+      const postData = {
+        tag_name: newVersion,
+        target_commitish: payload.after,
+        name: newVersion,
+        body: payload.head_commit.message
+      };
+
+      console.log(`creating release to ${releaseUrl} with payload:`);
+      console.log(JSON.stringify(postData, null, 2));
+
+      axios
+        .post(releaseUrl, postData)
+        .then(() => {
+          console.log('release successful');
+          console.log({oldVersion, newVersion});
+        })
+        .catch(err => {
+          console.error('release error: ', err);
+        });
+    }
   });
 };
 
-function get_commit(url) {
-  var deferred = Q.defer();
-  superagent
-    .get(url)
-    .end(function(error, res) {
-      if (error) { deferred.reject(error); }
-      if (!res.ok) { deferred.reject(res.status); }
-      deferred.resolve(res.body);
-    });
+function isInvalidPayload(payload, owner, repo) {
+  if (_.isError(payload) || _.isUndefined(payload)) {
+    return true;
+  }
+  if (_.get(payload, 'ref', '').toLowerCase() !== 'refs/heads/master') {
+    return true;
+  }
+  if (!_.includes(_.get(payload, 'head_commit.modified', ''), 'package.json')) {
+    return true;
+  }
+  if (!owner || !repo) {
+    return true;
+  }
+  return false;
+}
 
-  return deferred.promise;
+function getVersion(url) {
+  return get_commit(url)
+    .then(get_tree)
+    .then(get_package_json_blob)
+    .then(blobData => {
+      return JSON.parse(Buffer.from(blobData.content, 'base64')).version;
+    });
+}
+
+function get_commit(url) {
+  return axios.get(url).then(response => response.data);
 }
 
 function get_tree(commit) {
-  var deferred = Q.defer();
-  superagent
-    .get(commit.tree.url)
-    .end(function(error, res) {
-      if (error) { deferred.reject(error); }
-      if (!res.ok) { deferred.reject(res.status); }
-
-      deferred.resolve(res.body);
-    });
-
-  return deferred.promise;
+  return axios.get(commit.tree.url).then(response => response.data);
 }
 
 function get_package_json_blob(tree) {
-  var deferred = null;
-  var url = null;
-  var i;
-
-  for (i = 0; i < tree.tree.length; i++) {
-    if (tree.tree[i].path.toLowerCase() === "package.json") {
-      url = tree.tree[i].url;
-      break;
-    }
+  var packageJsonUrl = _.get(_.find(tree.tree, {path: 'package.json'}), 'url');
+  if (!packageJsonUrl) {
+    return Promise.reject('File not found');
   }
-
-  if (!url) { return Q.reject({"error": "file not found"}); }
-
-  deferred = Q.defer();
-
-  superagent
-    .get(url)
-    .end(function(error, res) {
-      if (error) { deferred.reject(error); }
-      if (!res.ok) { deferred.reject(res.status); }
-
-      deferred.resolve(res.body);
-    });
-
-  return deferred.promise;
+  return axios.get(packageJsonUrl).then(response => response.data);
 }
-
-
