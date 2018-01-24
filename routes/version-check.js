@@ -12,9 +12,10 @@
  */
 
 const _ = require('lodash');
-const axios = require('axios');
-axios.defaults.auth = {username: process.env.GITHUB_LOGIN, password: process.env.GITHUB_PASSWORD};
+const fetch = require('node-fetch');
 
+const base64BasicCreds = Buffer.from(`${process.env.GITHUB_LOGIN}:${process.env.GITHUB_PASSWORD}`).toString('base64');
+const headers = {Authorization: `Basic ${base64BasicCreds}`};
 const GITHUB_BASE_URL = process.env.GITHUB_URL;
 
 module.exports = app => {
@@ -54,8 +55,7 @@ module.exports = app => {
       console.log(`creating release to ${releaseUrl} with payload:`);
       console.log(JSON.stringify(postData, null, 2));
 
-      axios
-        .post(releaseUrl, postData)
+      fetch(releaseUrl, {method: 'POST', headers, body: JSON.stringify(postData)})
         .then(() => {
           console.log('release successful');
           console.log({oldVersion, newVersion});
@@ -93,11 +93,11 @@ function getVersion(url) {
 }
 
 function get_commit(url) {
-  return axios.get(url).then(response => response.data);
+  return fetch(url, {headers}).then(response => response.json());
 }
 
 function get_tree(commit) {
-  return axios.get(commit.tree.url).then(response => response.data);
+  return fetch(commit.tree.url, {headers}).then(response => response.json());
 }
 
 function get_package_json_blob(tree) {
@@ -105,5 +105,5 @@ function get_package_json_blob(tree) {
   if (!packageJsonUrl) {
     return Promise.reject('File not found');
   }
-  return axios.get(packageJsonUrl).then(response => response.data);
+  return fetch(packageJsonUrl, {headers}).then(response => response.json());
 }
