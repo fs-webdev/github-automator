@@ -30,42 +30,40 @@ module.exports = app => {
       return;
     }
     const commit_url = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/git/commits/`;
-    let oldVersion;
-    let newVersion;
 
     try {
-      oldVersion = await getVersion(commit_url + payload.before);
-      newVersion = await getVersion(commit_url + payload.after);
+      const oldVersion = await getVersion(commit_url + payload.before);
+      const newVersion = await getVersion(commit_url + payload.after);
       if (oldVersion !== newVersion) {
-        return createRelease();
+        return createRelease(oldVersion, newVersion, owner, repo, payload);
       }
     } catch (err) {
       console.error('error:', err);
     }
-
-    function createRelease() {
-      const releaseUrl = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/releases`;
-      const postData = {
-        tag_name: newVersion,
-        target_commitish: payload.after,
-        name: newVersion,
-        body: payload.head_commit.message
-      };
-
-      console.log(`creating release to ${releaseUrl} with payload:`);
-      console.log(JSON.stringify(postData, null, 2));
-
-      fetch(releaseUrl, {method: 'POST', headers, body: JSON.stringify(postData)})
-        .then(() => {
-          console.log('release successful');
-          console.log({oldVersion, newVersion});
-        })
-        .catch(err => {
-          console.error('release error: ', err);
-        });
-    }
   });
 };
+
+function createRelease(oldVersion, newVersion, owner, repo, payload) {
+  const releaseUrl = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/releases`;
+  const postData = {
+    tag_name: newVersion,
+    target_commitish: payload.after,
+    name: newVersion,
+    body: payload.head_commit.message
+  };
+
+  console.log(`creating release to ${releaseUrl} with payload:`);
+  console.log(JSON.stringify(postData, null, 2));
+
+  fetch(releaseUrl, {method: 'POST', headers, body: JSON.stringify(postData)})
+    .then(() => {
+      console.log('release successful');
+      console.log({oldVersion, newVersion});
+    })
+    .catch(err => {
+      console.error('release error: ', err);
+    });
+}
 
 function isInvalidPayload(payload, owner, repo) {
   if (_.isError(payload) || _.isUndefined(payload)) {
