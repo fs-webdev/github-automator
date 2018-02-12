@@ -37,7 +37,7 @@ module.exports = app => {
       oldVersion = await getVersion(commit_url + payload.before);
       newVersion = await getVersion(commit_url + payload.after);
       if (oldVersion !== newVersion) {
-        notifyComponentCatalog(repoName);
+        notifyComponentCatalog({repoName, owner});
         createRelease();
       }
     } catch (err) {
@@ -68,20 +68,20 @@ module.exports = app => {
   });
 };
 
-function notifyComponentCatalog(repoName) {
+function notifyComponentCatalog(bodyData) {
   const prodUrl = 'https://www.familysearch.org/frontier/elements/updateComponent';
   const betaUrl = 'https://beta.familysearch.org/frontier/elements/updateComponent';
   const options = {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({repoName})
+    body: JSON.stringify(bodyData)
   };
 
   fetch(prodUrl, options).catch(err => {
-    console.log('err: ', err);
+    console.log('Error notifying production component-catalog: ', err);
   });
   fetch(betaUrl, options).catch(err => {
-    console.log('err: ', err);
+    console.log('Error notifying beta component-catalog: ', err);
   });
 }
 
