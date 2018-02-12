@@ -24,12 +24,12 @@ module.exports = app => {
 
     const payload = _.attempt(JSON.parse, req.body.payload);
     const owner = _.get(payload, 'repository.owner.name');
-    const repo = _.get(payload, 'repository.name');
+    const repoName = _.get(payload, 'repository.name');
 
-    if (isInvalidPayload(payload, owner, repo)) {
+    if (isInvalidPayload(payload, owner, repoName)) {
       return;
     }
-    const commit_url = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/git/commits/`;
+    const commit_url = `${GITHUB_BASE_URL}/repos/${owner}/${repoName}/git/commits/`;
     let oldVersion;
     let newVersion;
 
@@ -37,14 +37,15 @@ module.exports = app => {
       oldVersion = await getVersion(commit_url + payload.before);
       newVersion = await getVersion(commit_url + payload.after);
       if (oldVersion !== newVersion) {
-        return createRelease();
+        notifyComponentCatalog({repoName, owner});
+        createRelease();
       }
     } catch (err) {
       console.error('error:', err);
     }
 
     function createRelease() {
-      const releaseUrl = `${GITHUB_BASE_URL}/repos/${owner}/${repo}/releases`;
+      const releaseUrl = `${GITHUB_BASE_URL}/repos/${owner}/${repoName}/releases`;
       const postData = {
         tag_name: newVersion,
         target_commitish: payload.after,
@@ -66,6 +67,23 @@ module.exports = app => {
     }
   });
 };
+
+function notifyComponentCatalog(bodyData) {
+  const prodUrl = 'https://www.familysearch.org/frontier/elements/updateComponent';
+  const betaUrl = 'https://beta.familysearch.org/frontier/elements/updateComponent';
+  const options = {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(bodyData)
+  };
+
+  fetch(prodUrl, options).catch(err => {
+    console.log('Error notifying production component-catalog: ', err);
+  });
+  fetch(betaUrl, options).catch(err => {
+    console.log('Error notifying beta component-catalog: ', err);
+  });
+}
 
 function isInvalidPayload(payload, owner, repo) {
   if (_.isError(payload) || _.isUndefined(payload)) {
