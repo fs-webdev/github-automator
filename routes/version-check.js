@@ -23,6 +23,8 @@ module.exports = app => {
     res.send(202);
 
     const payload = _.attempt(JSON.parse, req.body.payload);
+    console.log('typeof payload: ', typeof payload);
+    console.log('payload: ', payload);
     const owner = _.get(payload, 'repository.owner.name');
     const repoName = _.get(payload, 'repository.name');
 
@@ -87,15 +89,19 @@ function notifyComponentCatalog(bodyData) {
 
 function isInvalidPayload(payload, owner, repo) {
   if (_.isError(payload) || _.isUndefined(payload)) {
+    console.log('Invalid Payload: There was an issue with JSON.parse of the payload.');
     return true;
   }
   if (_.get(payload, 'ref', '').toLowerCase() !== 'refs/heads/master') {
+    console.log('Invalid Payload: The payload ref was not pointing to refs/heads/master.');
     return true;
   }
   if (!_.includes(_.get(payload, 'head_commit.modified', ''), 'package.json')) {
+    console.log('Invalid Payload: The package.json file was not editted in this commit.');
     return true;
   }
   if (!owner || !repo) {
+    console.log('Invalid Payload: The owner or repo is not present in the payload.');
     return true;
   }
   return false;
@@ -121,7 +127,7 @@ function get_tree(commit) {
 function get_package_json_blob(tree) {
   var packageJsonUrl = _.get(_.find(tree.tree, {path: 'package.json'}), 'url');
   if (!packageJsonUrl) {
-    return Promise.reject('File not found');
+    return Promise.reject('Package.json url not found in the commit tree data');
   }
   return fetch(packageJsonUrl, {headers}).then(response => response.json());
 }
