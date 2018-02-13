@@ -22,10 +22,7 @@ module.exports = app => {
   app.post('/version-check', async function(req, res) {
     res.send(202);
 
-    console.log('req.body: ', req.body);
     const payload = _.attempt(JSON.parse, req.body.payload);
-    console.log('typeof payload: ', typeof payload);
-    console.log('payload: ', payload);
     const owner = _.get(payload, 'repository.owner.name');
     const repoName = _.get(payload, 'repository.name');
 
@@ -80,12 +77,20 @@ function notifyComponentCatalog(bodyData) {
     body: JSON.stringify(bodyData)
   };
 
-  fetch(prodUrl, options).catch(err => {
-    console.log('Error notifying production component-catalog: ', err);
-  });
-  fetch(betaUrl, options).catch(err => {
-    console.log('Error notifying beta component-catalog: ', err);
-  });
+  fetch(prodUrl, options)
+    .then(() => {
+      console.log(`Notified prod component-catalog of the potential update for ${bodyData.repoName}`);
+    })
+    .catch(err => {
+      console.log('Error notifying production component-catalog: ', err);
+    });
+  fetch(betaUrl, options)
+    .then(() => {
+      console.log(`Notified beta component-catalog of the potential update for ${bodyData.repoName}`);
+    })
+    .catch(err => {
+      console.log('Error notifying beta component-catalog: ', err);
+    });
 }
 
 function isInvalidPayload(payload, owner, repo) {
