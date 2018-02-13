@@ -22,7 +22,7 @@ module.exports = app => {
   app.post('/version-check', async function(req, res) {
     res.send(202);
 
-    console.log('req.body.payload: ', req.body);
+    console.log('req.body: ', req.body);
     const payload = _.attempt(JSON.parse, req.body.payload);
     console.log('typeof payload: ', typeof payload);
     console.log('payload: ', payload);
