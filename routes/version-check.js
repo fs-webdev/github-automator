@@ -40,8 +40,8 @@ module.exports = app => {
       if (oldVersion !== newVersion) {
         if (TARGET_ENV === 'prod') {
           notifyComponentCatalog({repoName, owner});
+          createRelease(owner, repoName, oldVersion, newVersion, payload);
         }
-        createRelease(owner, repoName, oldVersion, newVersion, payload);
       }
     } catch (err) {
       console.error('error:', err);
@@ -123,8 +123,18 @@ async function getVersion(commitUrl) {
   const commitData = await fetchJson(commitUrl);
   const treeData = await fetchJson(commitData.tree.url);
   const {packageJson, bowerJson} = await getPackageAndBower(treeData);
-  console.log('packageJson: ', packageJson);
-  console.log('bowerJson: ', bowerJson);
+  if (packageJson && bowerJson) {
+    if (_.get(packageJson, 'version', 'noPackageVersion') !== _.get(bowerJson, 'version', 'noBowerVersion')) {
+      throw new Error('Package version and bower version do not match. Not making a release tag');
+    }
+
+    const version = _.get(packageJson, 'version', _.get(bowerJson, 'version'));
+    if (!version) {
+      throw new Error('A version was not specified in either the package.json or the bower.json');
+    }
+    return version;
+  }
+
   return packageJson.version || bowerJson.version;
 }
 
