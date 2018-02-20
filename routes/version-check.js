@@ -35,8 +35,6 @@ module.exports = app => {
     try {
       const oldVersion = await getVersion(commit_url + payload.before);
       const newVersion = await getVersion(commit_url + payload.after);
-      console.log('oldVersion: ', oldVersion);
-      console.log('newVersion: ', newVersion);
       if (oldVersion !== newVersion) {
         if (TARGET_ENV === 'prod') {
           notifyComponentCatalog({repoName, owner});
@@ -127,15 +125,13 @@ async function getVersion(commitUrl) {
     if (_.get(packageJson, 'version', 'noPackageVersion') !== _.get(bowerJson, 'version', 'noBowerVersion')) {
       throw new Error('Package version and bower version do not match. Not making a release tag');
     }
-
-    const version = _.get(packageJson, 'version', _.get(bowerJson, 'version'));
-    if (!version) {
-      throw new Error('A version was not specified in either the package.json or the bower.json');
-    }
-    return version;
   }
 
-  return packageJson.version || bowerJson.version;
+  const version = _.get(packageJson, 'version') || _.get(bowerJson, 'version');
+  if (!version) {
+    throw new Error('A version was not specified in either the package.json or the bower.json. Not making a release tag');
+  }
+  return version;
 }
 
 async function getPackageAndBower(treeData) {
