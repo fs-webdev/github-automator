@@ -1,8 +1,10 @@
 GitHub Automator
 ================
 
-- Simple script to automatically create new releases when the `package.json` file version changes.  
+- Simple script to automatically create new releases when the `package.json` or `bower.json` file version changes.  
 The release title will be the version number and the release body will be the commit message.  
+(side note, if BOTH a package.json and bower.json file exist, and their version numbers do not correspond, the tagging and 
+updating of the component-catalog will be skipped.)
 - This automator will also ping the Component Catalog and if the repo is registered in the catalog.json there, it 
 will trigger a re-build of the component so it will be up to date in the Component Catalog.
 

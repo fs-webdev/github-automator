@@ -70,27 +70,19 @@ function createRelease(owner, repoName, oldVersion, newVersion, payload) {
 }
 
 function notifyComponentCatalog(bodyData) {
-  const prodUrl = 'https://www.familysearch.org/frontier/elements/updateComponent';
-  const betaUrl = 'https://beta.familysearch.org/frontier/elements/updateComponent';
+  const catalogUrl = 'https://beta.familysearch.org/frontier/elements/updateComponent';
   const options = {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(bodyData)
   };
 
-  fetch(prodUrl, options)
+  fetch(catalogUrl, options)
     .then(() => {
-      console.log(`Notified prod component-catalog of the potential update for ${bodyData.repoName}`);
+      console.log(`Notified component-catalog of the potential update for ${bodyData.repoName}`);
     })
     .catch(err => {
-      console.log('Error notifying production component-catalog: ', err);
-    });
-  fetch(betaUrl, options)
-    .then(() => {
-      console.log(`Notified beta component-catalog of the potential update for ${bodyData.repoName}`);
-    })
-    .catch(err => {
-      console.log('Error notifying beta component-catalog: ', err);
+      console.log('Error notifying component-catalog to update: ', err);
     });
 }
 
@@ -129,7 +121,7 @@ async function getVersion(commitUrl) {
 
   const version = _.get(packageJson, 'version') || _.get(bowerJson, 'version');
   if (!version) {
-    throw new Error('A version was not specified in either the package.json or the bower.json. Not making a release tag');
+    throw new Error('A version was not specified in either the package.json or the bower.json.');
   }
   return version;
 }
