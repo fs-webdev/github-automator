@@ -55,16 +55,20 @@ function createRelease(owner, repoName, oldVersion, newVersion, payload) {
     target_commitish: payload.after,
     name: newVersion,
     body: payload.head_commit.message,
-    prerelease: !_.isEmpty(semver.prerelease(newVersion)))
+    prerelease: !_.isEmpty(semver.prerelease(newVersion))
   };
 
   console.log(`creating release to ${releaseUrl} with payload:`);
   console.log(JSON.stringify(postData, null, 2));
 
   fetch(releaseUrl, {method: 'POST', headers, body: JSON.stringify(postData)})
-    .then(() => {
-      console.log('release successful');
-      console.log({oldVersion, newVersion});
+    .then(response => response.json())
+    .then(body => {
+      if (!_.isEmpty(body.errors)) {
+        console.log('There was an issue creating release on github.', body.message, body.errors[0]);
+      } else {
+        console.log(`${newVersion} release successful on github`);
+      }
     })
     .catch(err => {
       console.error('release error: ', err);
