@@ -13,8 +13,9 @@
 
 const _ = require('lodash');
 const fetch = require('node-fetch');
-const {GITHUB_LOGIN, GITHUB_PASSWORD, GITHUB_URL: GITHUB_BASE_URL, TARGET_ENV} = process.env;
+const semver = require('semver');
 
+const {GITHUB_LOGIN, GITHUB_PASSWORD, GITHUB_URL: GITHUB_BASE_URL, TARGET_ENV} = process.env;
 const base64BasicCreds = Buffer.from(`${GITHUB_LOGIN}:${GITHUB_PASSWORD}`).toString('base64');
 const headers = {Authorization: `Basic ${base64BasicCreds}`};
 
@@ -53,7 +54,8 @@ function createRelease(owner, repoName, oldVersion, newVersion, payload) {
     tag_name: newVersion,
     target_commitish: payload.after,
     name: newVersion,
-    body: payload.head_commit.message
+    body: payload.head_commit.message,
+    prerelease: !_.isEmpty(semver.prerelease(newVersion)))
   };
 
   console.log(`creating release to ${releaseUrl} with payload:`);
