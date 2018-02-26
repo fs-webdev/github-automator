@@ -13,60 +13,89 @@
 
 const _ = require('lodash');
 const fetch = require('node-fetch');
-const {GITHUB_LOGIN, GITHUB_PASSWORD, GITHUB_URL: GITHUB_BASE_URL, TARGET_ENV} = process.env;
+const semver = require('semver');
 
-const base64BasicCreds = Buffer.from(`${GITHUB_LOGIN}:${GITHUB_PASSWORD}`).toString('base64');
-const headers = {Authorization: `Basic ${base64BasicCreds}`};
+const {
+  buildCommitUrl,
+  isInvalidPayload,
+  GITHUB_BASE_URL,
+  githubFetchHeaders,
+  TARGET_ENV,
+  parseBlob,
+  fetchJson
+} = require('./helpers');
 
 module.exports = app => {
-  app.post('/version-check', async function(req, res) {
-    res.sendStatus(202);
-
-    const payload = _.attempt(JSON.parse, req.body.payload);
-    console.log('JSON.stringify(payload, null, 2): ', JSON.stringify(payload, null, 2));
-    const owner = _.get(payload, 'repository.owner.name');
-    const repoName = _.get(payload, 'repository.name');
-
-    if (isInvalidPayload(payload, owner, repoName)) {
-      return;
-    }
-    const commit_url = `${GITHUB_BASE_URL}/repos/${owner}/${repoName}/git/commits/`;
-
-    try {
-      const oldVersion = await getVersion(commit_url + payload.before);
-      const newVersion = await getVersion(commit_url + payload.after);
-      if (oldVersion !== newVersion) {
-        if (TARGET_ENV === 'prod') {
-          notifyComponentCatalog({repoName, owner});
-          createRelease(owner, repoName, oldVersion, newVersion, payload);
-        }
-      }
-    } catch (err) {
-      console.error('error:', err);
-    }
-  });
+  app.post('/version-check', fullVersionCheck);
+  app.post('/release', release);
 };
 
-function createRelease(owner, repoName, oldVersion, newVersion, payload) {
+async function release(req, res) {
+  try {
+    const {owner, repoName, commit, version} = req.body;
+    const versionInCode = await getVersion(buildCommitUrl(owner, repoName, commit));
+    if (versionInCode !== version) {
+      throw new Error(
+        `Version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
+      );
+    }
+    await createRelease(req.body);
+    await notifyComponentCatalog(req.body);
+    res.sendStatus(200);
+  } catch (err) {
+    console.log('err: ', err);
+    res.status(400).send(err.message);
+  }
+}
+
+async function fullVersionCheck(req, res) {
+  res.sendStatus(202);
+
+  //having to parse req.body.payload is an artifact of github webhooks using Content-type application/x-www-form-urlencoded
+  //when this was forked, that behavior was kept, and there are now many repos with a webhook of x-www-form-urlencoded
+  const payload = _.attempt(JSON.parse, req.body.payload);
+  const owner = _.get(payload, 'repository.owner.name');
+  const repoName = _.get(payload, 'repository.name');
+  const description = _.get(payload, 'head_commit.message', 'github-automator release');
+
+  if (isInvalidPayload(payload, owner, repoName)) {
+    return;
+  }
+
+  try {
+    const oldVersion = await getVersion(buildCommitUrl(owner, repoName, payload.before));
+    const newVersion = await getVersion(buildCommitUrl(owner, repoName, payload.after));
+    if (oldVersion !== newVersion) {
+      if (TARGET_ENV === 'prod') {
+        await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
+        await notifyComponentCatalog({repoName, owner});
+      }
+    }
+  } catch (err) {
+    console.error('error:', err);
+  }
+}
+
+async function createRelease({owner, repoName, version, commit, description}) {
   const releaseUrl = `${GITHUB_BASE_URL}/repos/${owner}/${repoName}/releases`;
   const postData = {
-    tag_name: newVersion,
-    target_commitish: payload.after,
-    name: newVersion,
-    body: payload.head_commit.message
+    tag_name: version,
+    target_commitish: commit,
+    name: version,
+    body: description,
+    prerelease: !_.isEmpty(semver.prerelease(version))
   };
 
   console.log(`creating release to ${releaseUrl} with payload:`);
   console.log(JSON.stringify(postData, null, 2));
 
-  fetch(releaseUrl, {method: 'POST', headers, body: JSON.stringify(postData)})
-    .then(() => {
-      console.log('release successful');
-      console.log({oldVersion, newVersion});
-    })
-    .catch(err => {
-      console.error('release error: ', err);
-    });
+  const response = await fetch(releaseUrl, {method: 'POST', headers: githubFetchHeaders, body: JSON.stringify(postData)});
+  const body = await response.json();
+  if (!_.isEmpty(body.errors)) {
+    throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
+  } else {
+    console.log(`${version} release successful on github`);
+  }
 }
 
 function notifyComponentCatalog(bodyData) {
@@ -84,29 +113,6 @@ function notifyComponentCatalog(bodyData) {
     .catch(err => {
       console.log('Error notifying component-catalog to update: ', err);
     });
-}
-
-function isInvalidPayload(payload, owner, repo) {
-  if (_.isError(payload) || _.isUndefined(payload)) {
-    console.log('Invalid Payload: There was an issue with JSON.parse of the payload.');
-    return true;
-  }
-  if (_.get(payload, 'ref', '').toLowerCase() !== 'refs/heads/master') {
-    console.log('Invalid Payload: The payload ref was not pointing to refs/heads/master.');
-    return true;
-  }
-  if (
-    !_.includes(_.get(payload, 'head_commit.modified', ''), 'package.json') &&
-    !_.includes(_.get(payload, 'head_commit.modified', ''), 'bower.json')
-  ) {
-    console.log('Invalid Payload: Neither of the package.json or bower.json files were edited this commit.');
-    return true;
-  }
-  if (!owner || !repo) {
-    console.log('Invalid Payload: The owner or repo is not present in the payload.');
-    return true;
-  }
-  return false;
 }
 
 async function getVersion(commitUrl) {
@@ -133,13 +139,4 @@ async function getPackageAndBower(treeData) {
     packageJson: packageJsonUrl ? await fetchJson(packageJsonUrl).then(parseBlob) : undefined,
     bowerJson: bowerJsonUrl ? await fetchJson(bowerJsonUrl).then(parseBlob) : undefined
   };
-}
-
-function parseBlob(blobData) {
-  return JSON.parse(Buffer.from(blobData.content, 'base64'));
-}
-
-async function fetchJson(url) {
-  const response = await fetch(url, {headers});
-  return await response.json();
 }
