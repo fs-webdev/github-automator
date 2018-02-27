@@ -117,8 +117,10 @@ function notifyComponentCatalog(bodyData) {
 }
 
 async function getVersion(commitUrl) {
-  console.log('commitUrl: ', commitUrl);
   const commitData = await fetchJson(commitUrl);
+  if (commitData.message === 'Not Found') {
+    throw new Error('Github returned "Not Found", which typically means not authorized. Make sure the fs-write user has write access to your repo.')
+  }
   const treeData = await fetchJson(commitData.tree.url);
   const {packageJson, bowerJson} = await getPackageAndBower(treeData);
   if (packageJson && bowerJson) {
