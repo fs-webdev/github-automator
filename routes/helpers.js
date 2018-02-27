@@ -13,14 +13,20 @@ module.exports = {
   isInvalidPayload,
   GITHUB_BASE_URL,
   TARGET_ENV
-}
+};
 
 function buildCommitUrl(owner, repoName, commit) {
   return `${GITHUB_BASE_URL}/repos/${owner}/${repoName}/git/commits/${commit}`;
 }
 
 function parseBlob(blobData) {
-  return JSON.parse(Buffer.from(blobData.content, 'base64'));
+  const jsonFile = _.attempt(JSON.parse, Buffer.from(blobData.content, 'base64'));
+  if (_.isError(jsonFile)) {
+    throw new Error(
+      'There was an error parsing the package or bower json file at this commit. Please verify it is valid json.'
+    );
+  }
+  return jsonFile;
 }
 
 async function fetchJson(url) {
@@ -50,4 +56,3 @@ function isInvalidPayload(payload, owner, repo) {
   }
   return false;
 }
-
