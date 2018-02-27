@@ -24,7 +24,7 @@ function parseBlob(blobData) {
 }
 
 async function fetchJson(url) {
-  const response = await fetch(url, {githubFetchHeaders});
+  const response = await fetch(url, {headers: githubFetchHeaders});
   return await response.json();
 }
 
