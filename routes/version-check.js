@@ -36,7 +36,7 @@ async function release(req, res) {
     const versionInCode = await getVersion(buildCommitUrl(owner, repoName, commit));
     if (versionInCode !== version) {
       throw new Error(
-        `Version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
+        `${repoName}: version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
       );
     }
     await createRelease(req.body);
@@ -94,7 +94,7 @@ async function createRelease({owner, repoName, version, commit, description}) {
   if (!_.isEmpty(body.errors)) {
     throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
   } else {
-    console.log(`${version} release successful on github`);
+    console.log(`${repoName} ${version} release successful on github`);
   }
 }
 
@@ -111,7 +111,7 @@ function notifyComponentCatalog(bodyData) {
       console.log(`Notified component-catalog of the potential update for ${bodyData.repoName}`);
     })
     .catch(err => {
-      console.log('Error notifying component-catalog to update: ', err);
+      console.log(`Error notifying component-catalog to update for ${bodyData.repoName}: `, err);
     });
 }
 
@@ -121,7 +121,7 @@ async function getVersion(commitUrl) {
   const {packageJson, bowerJson} = await getPackageAndBower(treeData);
   if (packageJson && bowerJson) {
     if (_.get(packageJson, 'version', 'noPackageVersion') !== _.get(bowerJson, 'version', 'noBowerVersion')) {
-      throw new Error('Package version and bower version do not match. Not making a release tag');
+      throw new Error(`Package version and bower version do not match at ${commitUrl}. Not making a release tag`);
     }
   }
 
