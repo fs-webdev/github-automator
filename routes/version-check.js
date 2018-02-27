@@ -33,6 +33,7 @@ module.exports = app => {
 async function release(req, res) {
   try {
     const {owner, repoName, commit, version} = req.body;
+    console.log('req.body: ', req.body);
     const versionInCode = await getVersion(buildCommitUrl(owner, repoName, commit));
     if (versionInCode !== version) {
       throw new Error(
@@ -116,6 +117,7 @@ function notifyComponentCatalog(bodyData) {
 }
 
 async function getVersion(commitUrl) {
+  console.log('commitUrl: ', commitUrl);
   const commitData = await fetchJson(commitUrl);
   const treeData = await fetchJson(commitData.tree.url);
   const {packageJson, bowerJson} = await getPackageAndBower(treeData);
