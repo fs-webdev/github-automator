@@ -46,7 +46,7 @@ async function release(req, res) {
   } catch (err) {
     console.log(`Attempt to release ${repoName} to ${version} failed with the following error: ${err.message}`);
     res.append('Warning', err.message);
-    res.sendStatus(400);
+    res.status(400).send(err.message);
   }
 }
 
