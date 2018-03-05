@@ -42,7 +42,7 @@ async function release(req, res) {
     }
     await createRelease(req.body);
     await notifyComponentCatalog(req.body);
-    res.sendStatus(200);
+    res.sendStatus(204);
   } catch (err) {
     console.log(`Attempt to release ${repoName} to ${version} failed with the following error: ${err.message}`);
     res.append('Warning', err.message);
