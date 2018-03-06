@@ -31,20 +31,21 @@ module.exports = app => {
 };
 
 async function release(req, res) {
+  const {owner, repoName, commit, version} = req.body;
   try {
-    const {owner, repoName, commit, version} = req.body;
     console.log('req.body: ', req.body);
     const versionInCode = await getVersion(buildCommitUrl(owner, repoName, commit));
     if (versionInCode !== version) {
       throw new Error(
-        `${repoName}: version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
+        `Version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
       );
     }
     await createRelease(req.body);
     await notifyComponentCatalog(req.body);
-    res.sendStatus(200);
+    res.sendStatus(204);
   } catch (err) {
-    console.log('err: ', err);
+    console.log(`Attempt to release ${repoName} to ${version} failed with the following error: ${err.message}`);
+    res.append('Warning', err.message);
     res.status(400).send(err.message);
   }
 }
@@ -90,7 +91,11 @@ async function createRelease({owner, repoName, version, commit, description}) {
   console.log(`creating release to ${releaseUrl} with payload:`);
   console.log(JSON.stringify(postData, null, 2));
 
-  const response = await fetch(releaseUrl, {method: 'POST', headers: githubFetchHeaders, body: JSON.stringify(postData)});
+  const response = await fetch(releaseUrl, {
+    method: 'POST',
+    headers: githubFetchHeaders,
+    body: JSON.stringify(postData)
+  });
   const body = await response.json();
   if (!_.isEmpty(body.errors)) {
     throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
@@ -119,7 +124,9 @@ function notifyComponentCatalog(bodyData) {
 async function getVersion(commitUrl) {
   const commitData = await fetchJson(commitUrl);
   if (commitData.message === 'Not Found') {
-    throw new Error('Github returned "Not Found", which typically means not authorized. Make sure the fs-write user has write access to your repo.')
+    throw new Error(
+      'Github returned "Not Found", which typically means not authorized. Make sure the fs-write user has write access to your repo.'
+    );
   }
   const treeData = await fetchJson(commitData.tree.url);
   const {packageJson, bowerJson} = await getPackageAndBower(treeData);
