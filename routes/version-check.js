@@ -52,6 +52,7 @@ async function release(req, res) {
 
 async function fullVersionCheck(req, res) {
   res.sendStatus(202);
+  console.log('req.body: ', req.body);
 
   //having to parse req.body.payload is an artifact of github webhooks using Content-type application/x-www-form-urlencoded
   //when this was forked, that behavior was kept, and there are now many repos with a webhook of x-www-form-urlencoded
