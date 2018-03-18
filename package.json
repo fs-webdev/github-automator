@@ -4,7 +4,7 @@
   "private": true,
   "main": "app.js",
   "scripts": {
-    "start": "node app.js",
+    "start": "startup start",
     "lintCheck": "eslint app.js routes/"
   },
   "eslintConfig": {
@@ -17,13 +17,14 @@
   },
   "dependencies": {
     "body-parser": "^1.18.2",
+    "debug": "^3.1.0",
     "errorhandler": "^1.5.0",
     "express": "^4.16.2",
     "lodash": "^4.17.4",
     "morgan": "^1.9.0",
     "node-fetch": "^1.7.3",
     "semver": "^5.5.0",
-    "startup": "1.1.0"
+    "startup": "github:fs-webdev/startup"
   },
   "engines": {
     "node": "8"
