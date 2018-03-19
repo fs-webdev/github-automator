@@ -40,14 +40,14 @@ function isInvalidPayload(payload, owner, repo) {
     return true;
   }
   if (_.get(payload, 'ref', '').toLowerCase() !== 'refs/heads/master') {
-    console.log('Invalid Payload: The payload ref was not pointing to refs/heads/master.');
+    console.log('Ignored Payload: The payload ref was not pointing to refs/heads/master.');
     return true;
   }
   if (
     !_.includes(_.get(payload, 'head_commit.modified', ''), 'package.json') &&
     !_.includes(_.get(payload, 'head_commit.modified', ''), 'bower.json')
   ) {
-    console.log('Invalid Payload: Neither of the package.json or bower.json files were edited this commit.');
+    console.log('Ignored Payload: Neither of the package.json or bower.json files were edited this commit.');
     return true;
   }
   if (!owner || !repo) {
