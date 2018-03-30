@@ -48,7 +48,6 @@ async function githubWebhookCheckRelease(req, res) {
   const commit = _.get(payload, 'head_commit.id');
   console.log(`Received GitHub event: type=${req.get('X-GitHub-Event')} repo=${repoName} owner=${owner} commit=${commit} id=${req.get('X-GitHub-Delivery')} content-type=${req.is()}`);
 
-  console.log('payload: ', payload);
   if (isInvalidPayload(payload, owner, repoName)) {
     return;
   }
@@ -117,13 +116,13 @@ async function getVersion(owner, repoName, commit) {
   const packageJson = await packageReponse.json();
   const bowerJson = await bowerReponse.json();
 
-  if (packageJson && bowerJson) {
-    if (_.get(packageJson, 'version', 'noPackageVersion') !== _.get(bowerJson, 'version', 'noBowerVersion')) {
+  if (packageJson.version && bowerJson.version) {
+    if (packageJson.version !== bowerJson.version) {
       throw new Error(`Package version and bower version do not match at ${commit}. Not making a release tag`);
     }
   }
 
-  const version = _.get(packageJson, 'version') || _.get(bowerJson, 'version');
+  const version = packageJson.version || bowerJson.version;
   if (!version) {
     throw new Error('A version was not specified in either of the package.json or the bower.json.');
   }
