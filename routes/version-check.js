@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const semver = require('semver');
 const debug = require('debug')('version-check');
 
-const {getNewestReleasedVersion, isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
+const {isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
 
 module.exports = app => {
   app.post('/version-check', githubWebhookCheckRelease);
@@ -54,13 +54,11 @@ async function githubWebhookCheckRelease(req, res) {
   }
 
   try {
-    await getNewestReleasedVersion(owner, repoName);
-    const oldVersion = await getVersion(owner, repoName, payload.before);
+    //no longer checking if oldVersion (previousCommitVersion) !== newVersion (currentCommitVersion) cause if the version already exists
+    //has a release, then the createRelease is just a noop, but the !== checking from before was stopping releases that should have occurred
     const newVersion = await getVersion(owner, repoName, payload.after);
-    if (oldVersion !== newVersion) {
-      await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
-      await notifyComponentCatalog({repoName, owner});
-    }
+    await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
+    await notifyComponentCatalog({repoName, owner});
   } catch (err) {
     console.error('error:', err);
   }
