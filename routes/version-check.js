@@ -1,32 +1,11 @@
-/**
- * This file has one endpoint which sits on /version-check via the POST method.
- * It recieves a github commit hook, and then runs through some logic, given the
- * right conditions it will create a release.
- *
- * 1. Make call against the repository in question for last commit before this push
- * 2. From that commit fetch the file_tree at the time that commit was made
- * 3. Grab the package.json blob from the tree, and convert it into json and grab the version
- * 4. Repeat steps 1-3 but with the new commit
- * 5. Compare the version from step 3 and from step 4 if they are different submit a new release
- *
- */
-
 const _ = require('lodash');
 const fetch = require('node-fetch');
 const semver = require('semver');
 
-const {
-  buildCommitUrl,
-  isInvalidPayload,
-  GITHUB_BASE_URL,
-  githubFetchHeaders,
-  TARGET_ENV,
-  parseBlob,
-  fetchJson
-} = require('./helpers');
+const {isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
 
 module.exports = app => {
-  app.post('/version-check', fullVersionCheck);
+  app.post('/version-check', githubWebhookCheckRelease);
   app.post('/release', release);
 };
 
@@ -34,7 +13,7 @@ async function release(req, res) {
   const {owner, repoName, commit, version} = req.body;
   try {
     console.log('req.body: ', req.body);
-    const versionInCode = await getVersion(buildCommitUrl(owner, repoName, commit));
+    const versionInCode = await getVersion(owner, repoName, commit);
     if (versionInCode !== version) {
       throw new Error(
         `Version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
@@ -50,7 +29,7 @@ async function release(req, res) {
   }
 }
 
-async function fullVersionCheck(req, res) {
+async function githubWebhookCheckRelease(req, res) {
   res.sendStatus(202);
 
   //having to parse req.body.payload is an artifact of github webhooks using Content-type application/x-www-form-urlencoded
@@ -65,13 +44,11 @@ async function fullVersionCheck(req, res) {
   }
 
   try {
-    const oldVersion = await getVersion(buildCommitUrl(owner, repoName, payload.before));
-    const newVersion = await getVersion(buildCommitUrl(owner, repoName, payload.after));
+    const oldVersion = await getVersion(owner, repoName, payload.before);
+    const newVersion = await getVersion(owner, repoName, payload.after);
     if (oldVersion !== newVersion) {
-      if (TARGET_ENV === 'prod') {
-        await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
-        await notifyComponentCatalog({repoName, owner});
-      }
+      await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
+      await notifyComponentCatalog({repoName, owner});
     }
   } catch (err) {
     console.error('error:', err);
@@ -121,33 +98,25 @@ function notifyComponentCatalog(bodyData) {
     });
 }
 
-async function getVersion(commitUrl) {
-  const commitData = await fetchJson(commitUrl);
-  if (commitData.message === 'Not Found') {
-    throw new Error(
-      'Github returned "Not Found", which typically means not authorized. Make sure the fs-write user has write access to your repo.'
-    );
-  }
-  const treeData = await fetchJson(commitData.tree.url);
-  const {packageJson, bowerJson} = await getPackageAndBower(treeData);
+async function getVersion(owner, repoName, commit) {
+  const packageUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/package.json?ref=${commit}`;
+  const bowerUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/bower.json?ref=${commit}`;
+  const headers = _.assign(githubFetchHeaders, {Accept: 'application/vnd.github.3.raw'});
+
+  const packageReponse = await fetch(packageUrl, {headers});
+  const bowerReponse = await fetch(bowerUrl, {headers});
+  const packageJson = await packageReponse.json();
+  const bowerJson = await bowerReponse.json();
+
   if (packageJson && bowerJson) {
     if (_.get(packageJson, 'version', 'noPackageVersion') !== _.get(bowerJson, 'version', 'noBowerVersion')) {
-      throw new Error(`Package version and bower version do not match at ${commitUrl}. Not making a release tag`);
+      throw new Error(`Package version and bower version do not match at ${commit}. Not making a release tag`);
     }
   }
 
   const version = _.get(packageJson, 'version') || _.get(bowerJson, 'version');
   if (!version) {
-    throw new Error('A version was not specified in either the package.json or the bower.json.');
+    throw new Error('A version was not specified in either of the package.json or the bower.json.');
   }
   return version;
-}
-
-async function getPackageAndBower(treeData) {
-  const packageJsonUrl = _.get(_.find(treeData.tree, {path: 'package.json'}), 'url');
-  const bowerJsonUrl = _.get(_.find(treeData.tree, {path: 'bower.json'}), 'url');
-  return {
-    packageJson: packageJsonUrl ? await fetchJson(packageJsonUrl).then(parseBlob) : undefined,
-    bowerJson: bowerJsonUrl ? await fetchJson(bowerJsonUrl).then(parseBlob) : undefined
-  };
 }
