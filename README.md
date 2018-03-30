@@ -10,14 +10,14 @@ will trigger a re-build of the component so it will be up to date in the Compone
 
 ## Setup
 
-1. Add the `fs-write` group to your repo's collaborators.
+1. Add the `fs-write` or `fs-webdev` group to your repo's collaborators with Write access.
 
 2. Setup a webhook on github with the following settings:
   
   | Key | Value |
   |:----|:------|
-  | Payload URL | http://fs-github-automator.herokuapp.com/version-check |
-  | Content type | application/x-www-form-urlencoded |
+  | Payload URL | https://fs-github-automator.herokuapp.com/version-check |
+  | Content type | application/json OR application/x-www-form-urlencoded |
   | Secret | |
   | Which events would you like to trigger this webhook? | Just the push event |
 
@@ -42,7 +42,7 @@ will trigger a re-build of the component so it will be up to date in the Compone
 
 ### Notes
 - The version supplied in the POST body needs to match the version in your package/bower json for the commit
-- If everything went fine, you will get a 200 response
+- If everything went fine, you will get a 204 response
 - If there is an issue, a 400 will be returned with an error message describing the issue
 
 ## Example 
