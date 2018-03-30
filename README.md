@@ -42,7 +42,7 @@ will trigger a re-build of the component so it will be up to date in the Compone
 
 ### Notes
 - The version supplied in the POST body needs to match the version in your package/bower json for the commit
-- If everything went fine, you will get a 200 response
+- If everything went fine, you will get a 204 response
 - If there is an issue, a 400 will be returned with an error message describing the issue
 
 ## Example 
