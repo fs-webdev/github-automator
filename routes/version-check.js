@@ -1,6 +1,7 @@
 const _ = require('lodash');
 const fetch = require('node-fetch');
 const semver = require('semver');
+const debug = require('debug')('version-check');
 
 const {getNewestReleasedVersion, isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
 
@@ -31,13 +32,21 @@ async function release(req, res) {
 
 async function githubWebhookCheckRelease(req, res) {
   res.sendStatus(202);
+  debug('req.body:', req.body);
 
-  //having to parse req.body.payload is an artifact of github webhooks using Content-type application/x-www-form-urlencoded
-  //when this was forked, that behavior was kept, and there are now many repos with a webhook of x-www-form-urlencoded
-  const payload = _.attempt(JSON.parse, req.body.payload);
+  let payload;
+  if (req.is('json')) {
+    payload = req.body;
+  } else {
+    //having to parse req.body.payload is an artifact of github webhooks using Content-type application/x-www-form-urlencoded
+    //when this was forked, that behavior was kept, and there are now many repos with a webhook of x-www-form-urlencoded
+    payload = _.attempt(JSON.parse, req.body.payload);
+  }
   const owner = _.get(payload, 'repository.owner.name');
   const repoName = _.get(payload, 'repository.name');
   const description = _.get(payload, 'head_commit.message', 'github-automator release');
+  const commit = _.get(payload, 'head_commit.id');
+  console.log(`Received GitHub event: type=${req.get('X-GitHub-Event')} repo=${repoName} owner=${owner} commit=${commit} id=${req.get('X-GitHub-Delivery')} content-type=${req.is()}`);
 
   console.log('payload: ', payload);
   if (isInvalidPayload(payload, owner, repoName)) {
