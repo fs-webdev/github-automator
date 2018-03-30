@@ -2,7 +2,7 @@ const _ = require('lodash');
 const fetch = require('node-fetch');
 const semver = require('semver');
 
-const {isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
+const {getNewestReleasedVersion, isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
 
 module.exports = app => {
   app.post('/version-check', githubWebhookCheckRelease);
@@ -39,11 +39,13 @@ async function githubWebhookCheckRelease(req, res) {
   const repoName = _.get(payload, 'repository.name');
   const description = _.get(payload, 'head_commit.message', 'github-automator release');
 
+  console.log('payload: ', payload);
   if (isInvalidPayload(payload, owner, repoName)) {
     return;
   }
 
   try {
+    await getNewestReleasedVersion(owner, repoName);
     const oldVersion = await getVersion(owner, repoName, payload.before);
     const newVersion = await getVersion(owner, repoName, payload.after);
     if (oldVersion !== newVersion) {
