@@ -90,7 +90,7 @@ async function createRelease({owner, repoName, version, commit, description}) {
 }
 
 function notifyComponentCatalog(bodyData) {
-  const catalogUrl = 'https://beta.familysearch.org/frontier/elements/updateComponent';
+  const catalogUrl = 'https://beta.familysearch.org/frontier/catalog/updateComponent';
   const options = {
     method: 'POST',
     headers: {'Content-Type': 'application/json'},
