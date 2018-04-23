@@ -84,6 +84,8 @@ async function createRelease({owner, repoName, version, commit, description}) {
   const body = await response.json();
   if (!_.isEmpty(body.errors)) {
     throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
+  } else if(body.message === 'Not Found') {
+    throw new Error(`Github returned "Not Found". This most likely means that fs-write is not a collaborator for ${repoName}`);
   } else {
     console.log(`${repoName} ${version} release successful on github`);
   }
