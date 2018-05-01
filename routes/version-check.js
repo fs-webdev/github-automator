@@ -145,6 +145,6 @@ async function getCommitSinceLastTag(owner, repoName) {
   const latestRelease = await (await fetch(latestReleaseUrl, {headers: githubFetchHeaders})).json();
   const latestReleaseDate = latestRelease.created_at || latestRelease.published_at;
 
-  const commitsUrl = `https://api.github.com/repos/${owner}/${repoName}/commits?since=${latestReleaseDate}`;
+  const commitsUrl = `https://api.github.com/repos/${owner}/${repoName}/commits?per_page=100&since=${latestReleaseDate}`;
   return await (await fetch(commitsUrl, {headers: githubFetchHeaders})).json();
 }
