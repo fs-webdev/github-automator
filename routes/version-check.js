@@ -31,7 +31,6 @@ async function release(req, res) {
 }
 
 async function githubWebhookCheckRelease(req, res) {
-  res.sendStatus(202);
   debug('req.body:', req.body);
 
   let payload;
@@ -58,8 +57,10 @@ async function githubWebhookCheckRelease(req, res) {
     const newVersion = await getVersion(owner, repoName, payload.after);
     await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
     await notifyComponentCatalog({repoName, owner});
+    res.sendStatus(200);
   } catch (err) {
     console.error('error:', err);
+    res.status(400).send(`Error creating release: ${err}`);
   }
 }
 
