@@ -43,19 +43,20 @@ async function githubWebhookCheckRelease(req, res) {
   }
   const owner = _.get(payload, 'repository.owner.name');
   const repoName = _.get(payload, 'repository.name');
-  const description = _.get(payload, 'head_commit.message', 'github-automator release');
   const commit = _.get(payload, 'head_commit.id');
-  console.log(`Received GitHub event: type=${req.get('X-GitHub-Event')} repo=${repoName} owner=${owner} commit=${commit} id=${req.get('X-GitHub-Delivery')} content-type=${req.is()}`);
+  console.log(
+    `Received GitHub event: type=${req.get(
+      'X-GitHub-Event'
+    )} repo=${repoName} owner=${owner} commit=${commit} id=${req.get('X-GitHub-Delivery')} content-type=${req.is()}`
+  );
 
   if (isInvalidPayload(payload, owner, repoName)) {
     return;
   }
 
   try {
-    //no longer checking if oldVersion (previousCommitVersion) !== newVersion (currentCommitVersion) cause if the version already exists
-    //has a release, then the createRelease is just a noop, but the !== checking from before was stopping releases that should have occurred
     const newVersion = await getVersion(owner, repoName, payload.after);
-    await createRelease({owner, repoName, version: newVersion, commit: payload.after, description});
+    await createRelease({owner, repoName, version: newVersion, commit: payload.after});
     await notifyComponentCatalog({repoName, owner});
     res.sendStatus(200);
   } catch (err) {
@@ -70,7 +71,7 @@ async function createRelease({owner, repoName, version, commit, description}) {
     tag_name: version,
     target_commitish: commit,
     name: version,
-    body: description,
+    body: description || (await buildReleaseDescription(owner, repoName)),
     prerelease: !_.isEmpty(semver.prerelease(version))
   };
 
@@ -85,8 +86,10 @@ async function createRelease({owner, repoName, version, commit, description}) {
   const body = await response.json();
   if (!_.isEmpty(body.errors)) {
     throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
-  } else if(body.message === 'Not Found') {
-    throw new Error(`Github returned "Not Found". This most likely means that fs-write is not a collaborator for ${repoName}`);
+  } else if (body.message === 'Not Found') {
+    throw new Error(
+      `Github returned "Not Found". This most likely means that fs-write is not a collaborator for ${repoName}`
+    );
   } else {
     console.log(`${repoName} ${version} release successful on github`);
   }
@@ -130,4 +133,18 @@ async function getVersion(owner, repoName, commit) {
     throw new Error('A version was not specified in either of the package.json or the bower.json.');
   }
   return version;
+}
+
+async function buildReleaseDescription(owner, repoName) {
+  const commits = await getCommitSinceLastTag(owner, repoName);
+  return _.join(_.map(commits, commit => `- ${commit.commit.message}`), '\n');
+}
+
+async function getCommitSinceLastTag(owner, repoName) {
+  const latestReleaseUrl = `https://api.github.com/repos/${owner}/${repoName}/releases/latest`;
+  const latestRelease = await (await fetch(latestReleaseUrl, {headers: githubFetchHeaders})).json();
+  const latestReleaseDate = latestRelease.created_at || latestRelease.published_at;
+
+  const commitsUrl = `https://api.github.com/repos/${owner}/${repoName}/commits?since=${latestReleaseDate}`;
+  return await (await fetch(commitsUrl, {headers: githubFetchHeaders})).json();
 }
