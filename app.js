@@ -14,4 +14,4 @@ if (app.get('env') === 'development') {
   app.use(errorHandler());
 }
 
-require('./routes/version-check.js')(app);
+require('./routes/releaseRoutes')(app);

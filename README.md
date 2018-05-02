@@ -39,6 +39,7 @@ will trigger a re-build of the component so it will be up to date in the Compone
   - version = the semver version from your package or bower json file of the commit in question *required
   - commit = the commit hash for the release to be tied to. *required
   - description = any string description you want to have for the release
+  - author = name of commit Author to put into the slack channel (defaults to 'Github-Automator')
 
 ### Notes
 - The version supplied in the POST body needs to match the version in your package/bower json for the commit
@@ -56,7 +57,8 @@ const postData = {
   owner: 'fs-webdev',
   version: '2.0.0-rc1',
   commit: 'cc081d9e0ad0aa2e607253b8514296d84d89f5af',
-  description: 'This release is awesome and tested the prerelease feature of github-automator. :)'
+  description: 'This release is awesome and tested the prerelease feature of github-automator. :)',
+  author: 'Bobby Tables'
 };
 const url = 'http://fs-github-automator.herokuapp.com/release';
 
