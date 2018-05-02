@@ -33,7 +33,7 @@ async function notifySlack(repoData) {
   try {
     const slackOptions = await getRepoSlackOptions(repoData);
     const channels = (await slackWeb.channels.list()).channels;
-    const additionalChannels = slackOptions.additionalChannels || [];
+    let additionalChannels = slackOptions.additionalChannels || [];
     additionalChannels.push(_.assign(slackOptions, {name: 'webdev-updates'}));
     additionalChannels = _.uniqBy(additionalChannels, 'name');
 

@@ -21,6 +21,7 @@ module.exports = app => {
 
 async function release(req, res) {
   const {repoName, version} = req.body;
+  req.body.newVersion = req.body.version;
   req.body.description = req.body.description || (await buildReleaseDescription(req.body));
   req.body.latestRelease = await getLatestRelease(req.body);
   try {
