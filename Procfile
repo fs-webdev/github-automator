@@ -1,1 +1,1 @@
-web: npx startup start
+web: npx startup start -w 1
