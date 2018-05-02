@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const semver = require('semver');
 const debug = require('debug')('version-check');
 
-const {isInvalidPayload, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
+const {getPayloadIssue, GITHUB_BASE_URL, githubFetchHeaders} = require('./helpers');
 
 module.exports = app => {
   app.post('/version-check', githubWebhookCheckRelease);
@@ -44,13 +44,17 @@ async function githubWebhookCheckRelease(req, res) {
   const owner = _.get(payload, 'repository.owner.name');
   const repoName = _.get(payload, 'repository.name');
   const commit = _.get(payload, 'head_commit.id');
+  const event = req.get('X-GitHub-Event');
+  const githubId = req.get('X-GitHub-Delivery');
   console.log(
-    `Received GitHub event: type=${req.get(
-      'X-GitHub-Event'
-    )} repo=${repoName} owner=${owner} commit=${commit} id=${req.get('X-GitHub-Delivery')} content-type=${req.is()}`
+    `Received GitHub event: type=${event} repo=${repoName} owner=${owner} commit=${commit} id=${githubId} content-type=${req.is()}`
   );
 
-  if (isInvalidPayload(payload, owner, repoName)) {
+  const payloadIssue = getPayloadIssue(payload, owner, repoName);
+  if (payloadIssue) {
+    console.log(payloadIssue);
+    res.append('IgnoredPayload', payloadIssue);
+    res.sendStatus(202);
     return;
   }
 

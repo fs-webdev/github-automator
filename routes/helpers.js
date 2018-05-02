@@ -6,30 +6,26 @@ const githubFetchHeaders = {Authorization: `Basic ${base64BasicCreds}`};
 
 module.exports = {
   githubFetchHeaders,
-  isInvalidPayload,
+  getPayloadIssue,
   GITHUB_BASE_URL,
   TARGET_ENV
 };
 
-function isInvalidPayload(payload, owner, repoName) {
+function getPayloadIssue(payload, owner, repoName) {
   if (_.isError(payload) || _.isUndefined(payload)) {
-    console.log('Invalid Payload: There was an issue with JSON.parse of the payload.');
-    return true;
+    return 'Invalid Payload: There was an issue with JSON.parse of the payload.'
   }
   if (_.get(payload, 'ref', '').toLowerCase() !== 'refs/heads/master') {
-    console.log('Ignored Payload: The payload ref was not pointing to refs/heads/master.');
-    return true;
+    return 'Ignored Payload: The payload ref was not pointing to refs/heads/master.'
   }
   if (
     !_.includes(_.get(payload, 'head_commit.modified', ''), 'package.json') &&
     !_.includes(_.get(payload, 'head_commit.modified', ''), 'bower.json')
   ) {
-    console.log('Ignored Payload: Neither of the package.json or bower.json files were edited this commit.');
-    return true;
+    return 'Ignored Payload: Neither of the package.json or bower.json files were edited this commit.'
   }
   if (!owner || !repoName) {
-    console.log('Invalid Payload: The owner or repo is not present in the payload.');
-    return true;
+    return 'Invalid Payload: The owner or repo is not present in the payload.'
   }
-  return false;
+  return '';
 }
