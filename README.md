@@ -23,6 +23,31 @@ will trigger a re-build of the component so it will be up to date in the Compone
 
 ---  
 
+# Slack Notifications
+By default, this github-automator will notify the #webdev-updates channel of all Major version updates.  
+There are options that you can provide in your package.json or bower.json file to tweak the slack notification settings.
+
+Example of an entry in package.json
+```
+...
+"githubAutomatorOptions": {
+  "notifyMinorRelease": true
+},
+...
+```
+
+All Options for githubAutomatorOptions.
+- `notifyMinorRelease`: Boolean (Defaults to false)
+- `notifyPatchRelease`: Boolean (Defaults to false)
+- `disableSlackNotifications`: Boolean (Defaults to false)
+- `additionalChannels`: Array of objects. (Defaults to undefined)
+  - Each object in additionalChannels will look like this
+  - `{name: String, notifyMinorRelease: Boolean, notifyPatchRelease: Boolean}`
+
+If you are going to use the additionalChannels option to have slack notify more channels, you will need to make sure that
+the slack bot/user named "Frontier Tagger" is added or invited to your channel. To do so, all you need to do is type a message with 
+`@Frontier Tagger` in the message. Slack will then give you a link to click to make the bot join the channel.
+
 # Using a POST endpoint for more fine grained control
 - There are situations where you may want to not tie your release to a merge/push to master. (Tree team wants a release only
 after a successful build has occurred after a merge/push to master has already occurred.)
