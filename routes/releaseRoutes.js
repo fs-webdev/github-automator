@@ -3,7 +3,7 @@ const fetch = require('node-fetch');
 const semver = require('semver');
 const debug = require('debug')('version-check');
 
-const {notifySlack} = require('./slackClient');
+const {notifySlack} = require('../slackClient');
 const {
   getVersion,
   getLatestRelease,
