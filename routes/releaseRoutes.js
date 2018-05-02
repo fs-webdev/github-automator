@@ -20,11 +20,12 @@ module.exports = app => {
 };
 
 async function release(req, res) {
-  const {owner, repoName, commit, version, author} = req.body;
-  const latestRelease = await getLatestRelease({owner, repoName});
+  const {repoName, version} = req.body;
+  req.body.description = req.body.description || (await buildReleaseDescription(req.body));
+  req.body.latestRelease = await getLatestRelease(req.body);
   try {
-    console.log('req.body: ', req.body);
-    const versionInCode = await getVersion({owner, repoName, commit});
+    debug('req.body: ', req.body);
+    const versionInCode = await getVersion(req.body);
     if (versionInCode !== version) {
       throw new Error(
         `Version provided (${version}) does not equal version from package or bower json file. (${versionInCode})`
@@ -32,7 +33,7 @@ async function release(req, res) {
     }
     await createRelease(req.body);
     await notifyComponentCatalog(req.body);
-    await notifySlack(_.assign(req.body, {latestRelease, author}));
+    await notifySlack(req.body);
     res.sendStatus(204);
   } catch (err) {
     console.log(`Attempt to release ${repoName} to ${version} failed with the following error: ${err.message}`);
@@ -52,30 +53,38 @@ async function githubWebhookCheckRelease(req, res) {
     //when this was forked, that behavior was kept, and there are now many repos with a webhook of x-www-form-urlencoded
     payload = _.attempt(JSON.parse, req.body.payload);
   }
-  const owner = _.get(payload, 'repository.owner.name');
-  const repoName = _.get(payload, 'repository.name');
-  const commit = _.get(payload, 'head_commit.id');
-  const author = _.get(payload, 'head_commit.author.name', 'Github-Automator');
-  const latestRelease = await getLatestRelease({owner, repoName});
-  const event = req.get('X-GitHub-Event');
-  const githubId = req.get('X-GitHub-Delivery');
-  console.log(
-    `Received GitHub event: type=${event} repo=${repoName} owner=${owner} commit=${commit} id=${githubId} content-type=${req.is()}`
-  );
 
-  const payloadIssue = getPayloadIssue({payload, owner, repoName});
-  if (payloadIssue) {
-    console.log(payloadIssue);
-    res.append('IgnoredPayload', payloadIssue);
-    res.sendStatus(202);
-    return;
-  }
+  let repoData = {
+    owner: _.get(payload, 'repository.owner.name'),
+    repoName: _.get(payload, 'repository.name')
+  };
 
   try {
-    const newVersion = await getVersion({owner, repoName, commit: payload.after});
-    await createRelease({owner, repoName, newVersion, commit: payload.after});
-    await notifyComponentCatalog({repoName, owner});
-    await notifySlack({repoName, owner, newVersion, author, latestRelease});
+    repoData = _.assign(repoData, {
+      commit: _.get(payload, 'after'),
+      author: _.get(payload, 'head_commit.author.name'),
+      latestRelease: await getLatestRelease(repoData),
+      description: await buildReleaseDescription(repoData)
+    });
+
+    const event = req.get('X-GitHub-Event');
+    const githubId = req.get('X-GitHub-Delivery');
+    debug(
+      `Received GitHub event: type=${event} repo=${repoData.repoName} owner=${ repoData.owner } id=${githubId} content-type=${req.is()}`
+    );
+
+    const payloadIssue = getPayloadIssue(repoData);
+    if (payloadIssue) {
+      console.log(payloadIssue);
+      res.append('IgnoredPayload', payloadIssue);
+      res.sendStatus(202);
+      return;
+    }
+
+    repoData.newVersion = await getVersion(repoData);
+    await createRelease(repoData);
+    await notifyComponentCatalog(repoData);
+    await notifySlack(repoData);
     res.sendStatus(200);
   } catch (err) {
     console.error('error:', err);
@@ -89,14 +98,18 @@ async function createRelease({owner, repoName, newVersion, commit, description})
     tag_name: newVersion,
     target_commitish: commit,
     name: newVersion,
-    body: description || (await buildReleaseDescription({owner, repoName})),
+    body: description,
     prerelease: !_.isEmpty(semver.prerelease(newVersion))
   };
 
   console.log(`creating release to ${releaseUrl} with payload:`);
   console.log(JSON.stringify(postData, null, 2));
 
-  const response = await fetch(releaseUrl, { method: 'POST', headers: githubFetchHeaders, body: JSON.stringify(postData) });
+  const response = await fetch(releaseUrl, {
+    method: 'POST',
+    headers: githubFetchHeaders,
+    body: JSON.stringify(postData)
+  });
   const body = await response.json();
   if (!_.isEmpty(body.errors)) {
     throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
@@ -108,4 +121,3 @@ async function createRelease({owner, repoName, newVersion, commit, description})
     console.log(`${repoName} ${newVersion} release successful on github`);
   }
 }
-

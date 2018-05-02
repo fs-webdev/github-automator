@@ -8,6 +8,7 @@ const githubFetchHeaders = {Authorization: `Basic ${base64BasicCreds}`};
 module.exports = {
   githubFetchHeaders,
   getPayloadIssue,
+  getPackageAndBower,
   notifyComponentCatalog,
   buildReleaseDescription,
   getLatestRelease,
@@ -72,13 +73,19 @@ async function getLatestRelease({owner, repoName}) {
   return await (await fetch(latestReleaseUrl, {headers: githubFetchHeaders})).json();
 }
 
-async function getVersion({owner, repoName, commit}) {
+async function getPackageAndBower({owner, repoName, commit}) {
   const packageUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/package.json?ref=${commit}`;
   const bowerUrl = `https://api.github.com/repos/${owner}/${repoName}/contents/bower.json?ref=${commit}`;
   const headers = _.assign(githubFetchHeaders, {Accept: 'application/vnd.github.3.raw'});
 
-  const packageJson = await (await fetch(packageUrl, {headers})).json();
-  const bowerJson = await (await fetch(bowerUrl, {headers})).json();
+  return {
+    packageJson: await (await fetch(packageUrl, {headers})).json(),
+    bowerJson: await (await fetch(bowerUrl, {headers})).json()
+  }
+}
+
+async function getVersion({owner, repoName, commit}) {
+  const {packageJson, bowerJson} = await getPackageAndBower({owner, repoName, commit});
 
   if (packageJson.version && bowerJson.version) {
     if (packageJson.version !== bowerJson.version) {
