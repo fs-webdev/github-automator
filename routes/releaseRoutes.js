@@ -56,6 +56,7 @@ async function githubWebhookCheckRelease(req, res) {
   }
 
   let repoData = {
+    payload,
     owner: _.get(payload, 'repository.owner.name'),
     repoName: _.get(payload, 'repository.name')
   };
