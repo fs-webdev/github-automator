@@ -1,7 +1,7 @@
 const _ = require('lodash');
 const fetch = require('node-fetch');
 const semver = require('semver');
-const debug = require('debug')('version-check');
+const debug = require('debug')('releaseRoutes');
 
 const {notifySlack} = require('../slackClient');
 const {
@@ -20,7 +20,7 @@ module.exports = app => {
 };
 
 async function release(req, res) {
-    const {repoName, version} = req.body;
+  const {repoName, version} = req.body;
   try {
     req.body.newVersion = req.body.version;
     req.body.description = req.body.description || (await buildReleaseDescription(req.body));
@@ -69,6 +69,7 @@ async function githubWebhookCheckRelease(req, res) {
       description: await buildReleaseDescription(repoData)
     });
 
+    debug('built repoData in githubWebhookCheckRelease: ', repoData);
     const event = req.get('X-GitHub-Event');
     const githubId = req.get('X-GitHub-Delivery');
     debug(

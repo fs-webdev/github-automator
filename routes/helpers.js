@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const fetch = require('node-fetch');
+const debug = require('debug')('helpers');
 
 const {GITHUB_LOGIN, GITHUB_PASSWORD, GITHUB_URL: GITHUB_BASE_URL, TARGET_ENV} = process.env;
 const base64BasicCreds = Buffer.from(`${GITHUB_LOGIN}:${GITHUB_PASSWORD}`).toString('base64');
@@ -54,9 +55,10 @@ async function notifyComponentCatalog(bodyData) {
 }
 
 async function buildReleaseDescription({owner, repoName}) {
-  const commits = await getCommitSinceLastTag(owner, repoName);
+  const commits = await getCommitSinceLastTag({owner, repoName});
   //dropRight cause this list of commits includes the commit of the last release, but we dont need that
   //message included again in the newest release
+  debug('commits since last release: ', commits.length);
   return _.join(_.map(_.dropRight(commits), commit => `- ${commit.commit.message}`), '\n');
 }
 

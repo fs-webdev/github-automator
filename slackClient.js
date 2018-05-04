@@ -1,5 +1,6 @@
 const _ = require('lodash');
 const semverDiff = require('semver-diff');
+const debug = require('debug')('slackClient');
 const {WebClient} = require('@slack/client');
 let {SLACK_TOKEN} = process.env;
 if (!SLACK_TOKEN) {
@@ -32,6 +33,7 @@ async function notifySlack(repoData) {
 
   try {
     const slackOptions = await getRepoSlackOptions(repoData);
+    debug('slackOptions from package/bower json: ', slackOptions);
     const channels = (await slackWeb.channels.list()).channels;
     let additionalChannels = slackOptions.additionalChannels || [];
     additionalChannels.push(_.assign(slackOptions, {name: 'webdev-updates'}));
