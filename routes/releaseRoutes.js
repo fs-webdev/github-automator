@@ -20,11 +20,11 @@ module.exports = app => {
 };
 
 async function release(req, res) {
-  const {repoName, version} = req.body;
-  req.body.newVersion = req.body.version;
-  req.body.description = req.body.description || (await buildReleaseDescription(req.body));
-  req.body.latestRelease = await getLatestRelease(req.body);
+    const {repoName, version} = req.body;
   try {
+    req.body.newVersion = req.body.version;
+    req.body.description = req.body.description || (await buildReleaseDescription(req.body));
+    req.body.latestRelease = await getLatestRelease(req.body);
     debug('req.body: ', req.body);
     const versionInCode = await getVersion(req.body);
     if (versionInCode !== version) {
@@ -72,7 +72,9 @@ async function githubWebhookCheckRelease(req, res) {
     const event = req.get('X-GitHub-Event');
     const githubId = req.get('X-GitHub-Delivery');
     debug(
-      `Received GitHub event: type=${event} repo=${repoData.repoName} owner=${ repoData.owner } id=${githubId} content-type=${req.is()}`
+      `Received GitHub event: type=${event} repo=${repoData.repoName} owner=${
+        repoData.owner
+      } id=${githubId} content-type=${req.is()}`
     );
 
     const payloadIssue = getPayloadIssue(repoData);
