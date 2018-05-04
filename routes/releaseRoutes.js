@@ -117,7 +117,12 @@ async function createRelease({owner, repoName, newVersion, commit, description})
   });
   const body = await response.json();
   if (!_.isEmpty(body.errors)) {
-    throw new Error(`There was an issue creating release on github. ${body.message}. ${JSON.stringify(body.errors)}`);
+    const {code, field} = _.get(body, 'errors.0', {});
+    if (code === 'already_exists' && field === 'tag_name') {
+      throw new Error('Release/TagName already exists on Github, so release was not made.');
+    } else {
+      throw new Error(`There was an issue creating release on Github. ${body.message}. ${JSON.stringify(body.errors)}`);
+    }
   } else if (body.message === 'Not Found') {
     throw new Error(
       `Github returned "Not Found". This most likely means that fs-write is not a collaborator for ${repoName}`
