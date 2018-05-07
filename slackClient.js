@@ -40,12 +40,16 @@ async function notifySlack(repoData) {
     additionalChannels = _.uniqBy(additionalChannels, 'name');
 
     _.map(additionalChannels, async additionalChannelOptions => {
-      const slackChannel = _.find(channels, {name: additionalChannelOptions.name});
-      if (shouldNotifyChannel(repoData, additionalChannelOptions)) {
-        messageOptions.channel = slackChannel.id;
-        await slackWeb.chat.postMessage(messageOptions);
-      } else {
-        console.log('Not notifying slack of the release.');
+      try {
+        const slackChannel = _.find(channels, {name: additionalChannelOptions.name});
+        if (shouldNotifyChannel(repoData, additionalChannelOptions)) {
+          messageOptions.channel = slackChannel.id;
+          await slackWeb.chat.postMessage(messageOptions);
+        } else {
+          console.log('Not notifying slack of the release.');
+        }
+      } catch (err) {
+        console.log('There was an issue with the slack notification: ', err);
       }
     });
   } catch (err) {
@@ -54,6 +58,8 @@ async function notifySlack(repoData) {
 }
 
 function shouldNotifyChannel({latestRelease, newVersion}, channelOptions) {
+  debug('latestRelease.name: ', latestRelease.name);
+  debug('newVersion: ', newVersion);
   const releaseType = semverDiff(latestRelease.name, newVersion);
   return (
     !channelOptions.disableSlackNotifications &&
