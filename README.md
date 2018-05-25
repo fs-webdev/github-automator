@@ -9,7 +9,9 @@ will trigger a re-build of the component so it will be up to date in the Compone
 
 ## Setup
 
-1. Add either the `fs-write` user or the `fs-webdev` team to your repo's collaborators with 'Write' access.
+1. Add either the `fs-write` user or the `fs-webdev` team* to your repo's collaborators with 'Write' access.
+
+    *If available and if you want others in fs-webdev to be able to make PR's without having to fork.
 
 2. Setup a webhook on github with the following settings:
   
