@@ -2,15 +2,16 @@ GitHub Automator
 ================
 # Using Github Push Webhooks
 - Simple script to automatically create new releases when the `package.json` or `bower.json` file version changes.  
-The release title will be the version number and the release body will be the commit message.  
-(side note, if BOTH a package.json and bower.json file exist, and their version numbers do not correspond, the tagging and 
-updating of the component-catalog will be skipped.)
+The release title will be the version number and the release body will be the commit message.
+It will first check the version in `package.json`. If no `package.json` is present, then it will fall back onto the version in the  `bower.json`.
 - After a successful new release, this automator will also ping the Component Catalog and if the repo is registered in the catalog.json there, it 
 will trigger a re-build of the component so it will be up to date in the Component Catalog.
 
 ## Setup
 
-1. Add the `fs-write` or `fs-webdev` group to your repo's collaborators with Write access.
+1. Add either the `fs-write` user or the `fs-webdev` team* to your repo's collaborators with 'Write' access.
+
+    *If available and if you want others in fs-webdev to be able to make PR's without having to fork.
 
 2. Setup a webhook on github with the following settings:
   
