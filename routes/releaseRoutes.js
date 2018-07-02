@@ -119,7 +119,7 @@ async function createRelease({owner, repoName, newVersion, commit, description})
   if (!_.isEmpty(body.errors)) {
     const {code, field} = _.get(body, 'errors.0', {});
     if (code === 'already_exists' && field === 'tag_name') {
-      throw new Error('Release/TagName already exists on Github, so release was not made.');
+      throw new Error('Release/TagName already exists on Github, so not making a new release.');
     } else {
       throw new Error(`There was an issue creating release on Github. ${body.message}. ${JSON.stringify(body.errors)}`);
     }
