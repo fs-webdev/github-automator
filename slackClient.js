@@ -16,7 +16,7 @@ module.exports = {
 async function notifySlack(repoData) {
   const {description, owner, repoName, newVersion, author = 'Github-Automator'} = repoData;
   const messageOptions = {
-    text: description,
+    text: `*${repoName} - ${newVersion}*\n*ChangeLog: *\n${description}`,
     attachments: [
       {
         fallback: `${repoName} version ${newVersion} is now available`,
