@@ -16,7 +16,7 @@ module.exports = {
 async function notifySlack(repoData) {
   const {description, owner, repoName, newVersion, author = 'Github-Automator'} = repoData;
   const messageOptions = {
-    text: `*Repo:* ${repoName}\n*Version:* ${newVersion}\n*ChangeLog: *\n${description}`,
+    text: `*Repo:* ${repoName}\n*Version:* ${newVersion}`,
     attachments: [
       {
         fallback: `${repoName} version ${newVersion} is now available`,
@@ -30,6 +30,10 @@ async function notifySlack(repoData) {
     ],
     as_user: true
   };
+  const snippetData = {
+    content: description,
+    filename: 'changelog.txt'
+  }
 
   try {
     const slackOptions = await getRepoSlackOptions(repoData);
@@ -43,10 +47,14 @@ async function notifySlack(repoData) {
       try {
         const slackChannel = _.find(channels, {name: additionalChannelOptions.name});
         if (shouldNotifyChannel(repoData, additionalChannelOptions)) {
+          debug(`Going to notify ${slackChannel.name}`);
           messageOptions.channel = slackChannel.id;
+          //when uploading a file snippet, channels is a comma delimited string. Using 'channel' will not work
+          snippetData.channels = slackChannel.id;
           await slackWeb.chat.postMessage(messageOptions);
+          await slackWeb.files.upload(snippetData);
         } else {
-          console.log('Not notifying slack of the release.');
+          console.log(`Not notifying #${slackChannel.name} of the release.`);
         }
       } catch (err) {
         console.log('There was an issue with the slack notification: ', err);
