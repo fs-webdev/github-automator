@@ -40,7 +40,13 @@ async function notifySlack(repoData) {
     debug('slackOptions from package/bower json: ', slackOptions);
     const channels = (await slackWeb.channels.list()).channels;
     let additionalChannels = slackOptions.additionalChannels || [];
-    additionalChannels.push(_.assign(slackOptions, {name: 'webdev-updates'}));
+    const webdevUpdatesSlackOptions = {
+      name : 'webdev-updates',
+      notifyMinorRelease: slackOptions.notifyMinorRelease || false,
+      notifyPatchRelease: slackOptions.notifyPatchRelease || false,
+      disableSlackNotifications: slackOptions.disableSlackNotifications || false
+    };
+    additionalChannels.push(webdevUpdatesSlackOptions);
     additionalChannels = _.uniqBy(additionalChannels, 'name');
 
     _.map(additionalChannels, async additionalChannelOptions => {
