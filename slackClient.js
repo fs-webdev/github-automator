@@ -53,14 +53,14 @@ async function notifySlack(repoData) {
       try {
         const slackChannel = _.find(channels, {name: additionalChannelOptions.name});
         if (shouldNotifyChannel(repoData, additionalChannelOptions)) {
-          debug(`Going to notify ${slackChannel.name}`);
+          console.log(`Going to notify ${slackChannel.name} of the release of ${repoName} version ${newVersion}`);
           messageOptions.channel = slackChannel.id;
           //when uploading a file snippet, channels is a comma delimited string. Using 'channel' will not work
           snippetData.channels = slackChannel.id;
           await slackWeb.chat.postMessage(messageOptions);
           await slackWeb.files.upload(snippetData);
         } else {
-          console.log(`Not notifying #${slackChannel.name} of the release.`);
+          console.log(`Not notifying #${slackChannel.name} of the release of ${repoName} version ${newVersion}.`);
         }
       } catch (err) {
         console.log('There was an issue with the slack notification: ', err);
@@ -74,13 +74,21 @@ async function notifySlack(repoData) {
 function shouldNotifyChannel({latestRelease, newVersion}, channelOptions) {
   debug('latestRelease.name: ', latestRelease.name);
   debug('newVersion: ', newVersion);
+  if (channelOptions.disableSlackNotifications) {
+    return false;
+  }
   const releaseType = semverDiff(latestRelease.name, newVersion);
-  return (
-    !channelOptions.disableSlackNotifications &&
-    (releaseType === 'major' ||
-      (channelOptions.notifyMinorRelease && releaseType === 'minor') ||
-      (channelOptions.notifyPatchRelease && releaseType === 'patch'))
-  );
+  if (releaseType === 'major') {
+    return true;
+  }
+  //if notifyPatchRelease is true, then a minor release should also be notified
+  if (releaseType === 'minor') {
+    return channelOptions.notifyPatchRelease || channelOptions.notifyMinorRelease;
+  }
+  if (releaseType === 'patch') {
+    return channelOptions.notifyPatchRelease
+  }
+  return false;
 }
 
 async function getRepoSlackOptions(repoData) {
