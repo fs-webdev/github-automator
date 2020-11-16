@@ -2,9 +2,8 @@ const _ = require('lodash');
 const fetch = require('node-fetch');
 const debug = require('debug')('helpers');
 
-const {GITHUB_LOGIN, GITHUB_PASSWORD, GITHUB_URL: GITHUB_BASE_URL, TARGET_ENV} = process.env;
-const base64BasicCreds = Buffer.from(`${GITHUB_LOGIN}:${GITHUB_PASSWORD}`).toString('base64');
-const githubFetchHeaders = {Authorization: `Basic ${base64BasicCreds}`};
+const {GITHUB_TOKEN, GITHUB_URL: GITHUB_BASE_URL, TARGET_ENV} = process.env;
+const githubFetchHeaders = {Authorization: `token ${GITHUB_TOKEN}`};
 
 module.exports = {
   githubFetchHeaders,
